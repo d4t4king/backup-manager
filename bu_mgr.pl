@@ -125,6 +125,7 @@ use Data::Dumper;
 use Getopt::Long;
 
 my ($help,$verbose,$start_dir,$recurse);
+my (@files);
 $verbose = 0;
 $recurse = 0;
 
@@ -135,12 +136,17 @@ GetOptions(
 	'r|recurse'		=>	\$recurse,
 );
 
-my $b_obj = Backup->new("/mnt/array/backups/mercury.dataking.us/home_2016-11-20-05-00-01_mercury.dataking.us.tar.xz");
+&usage if ($help);
+&usage if ((!$start_dir) or ($start_dir eq ""));
 
-print Dumper($b_obj);
 
-print "The backup file ($b_obj->{'filename'}) is ".$b_obj->size_kbytes." KB.\n";
-print "The backup file ($b_obj->{'filename'}) is ".$b_obj->size_mbytes." MB.\n";
-print "The backup file ($b_obj->{'filename'}) is ".$b_obj->size_gbytes." GB.\n";
-print "The backup file ($b_obj->{'filename'}) is ".$b_obj->size_tbytes." TB.\n";
-print "The backup date is ".$b_obj->backup_date.".\n";
+
+###############################################################################
+# Subs
+###############################################################################
+sub wanted { -f && push @files, $File::Find::name; }
+
+sub usage {
+	print "Print the usage statement\n";
+	exit 0;
+}

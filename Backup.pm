@@ -18,18 +18,10 @@ our @EXPORT_OK	= qw( );
 	$Backup::VERSION	= '0.0.1';
 }
 
-my $self;
-
 sub new {
 	my $class = shift;
+	my $self = {};
 	$self->{'fullfilename'}	= shift;
-	&_parseObject($self);
-	bless $self, $class;
-	return $self;
-}
-
-sub _parseObject {
-	my $self = shift;
 	my @suffix_list = qw( tar.gz tar.xz tgz tar.Z tar.bz2 );
 	my ($base,$dir,$suffix) = fileparse($self->{'fullfilename'}, @suffix_list);
 	#print colored("\n$dir|$base|$suffix\n", "yellow");
@@ -51,9 +43,10 @@ sub _parseObject {
 	$self->{'atime'} = $fstat[8];
 	$self->{'mtime'} = $fstat[9];
 	$self->{'ctime'} = $fstat[10];
-}
 
-### Properties
+	bless $self, $class;
+	return $self;
+}
 
 sub backup_host {
 	my $self = shift;
@@ -101,17 +94,17 @@ sub size_kbytes {
 
 sub size_mbytes {
 	my $self = shift;
-	return ($self->{'size'} / 1024 / 1024);
+	return sprintf("%.2f", ($self->{'size'} / 1024 / 1024));
 }
 
 sub size_gbytes {
 	my $self = shift;
-	return ($self->{'size'} / 1024 / 1024 / 1024);
+	return sprintf("%.2f", ($self->{'size'} / 1024 / 1024 / 1024));
 }
 
 sub size_tbytes {
 	my $self = shift;
-	return ($self->{'size'} / 1024 / 1024 / 1024 / 1024);
+	return sprintf("%.3f", ($self->{'size'} / 1024 / 1024 / 1024 / 1024));
 }
 
 1;

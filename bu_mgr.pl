@@ -6,7 +6,7 @@ use feature qw( switch );
 no warnings 'experimental::smartmatch';
 use Term::ANSIColor;
 use Data::Dumper;
-use Getopt::Long;
+use Getopt::Long qw( :config no_ignore_case bundling );
 use File::Find;
 use Date::Calc qw( Today Today_and_Now Delta_Days Localtime );;
 
@@ -14,16 +14,20 @@ push @INC, '.';
 use Backup;
 
 my ($help,$verbose,$start_dir,$wizard);
-my ($period,$delete,$move,$show);
+my ($period,$delete,$move,$show,$move_dir);
 my (@files);
 $verbose = 0;
 
 GetOptions(
 	'h|help'		=>	\$help,
-	'v|verbose+'	=>	\$verbose,
-	'd|start_dir=s'	=>	\$start_dir,
+	'v|verbose+'		=>	\$verbose,
+	'd|startdir=s'		=>	\$start_dir,
 	'w|wizard'		=>	\$wizard,
-	'p|period=s'	=>	\$period,
+	'p|period=s'		=>	\$period,
+	'D|delete'		=>	\$delete,
+	's|show'		=>	\$show,
+	'm|move'		=>	\$move,
+	'M|movedir=s'		=>	\$move_dir,
 );
 
 &usage if ($help);
@@ -37,7 +41,7 @@ if ($wizard) {
 	} else {
 		die "Only numbers can be used for the retention period.\n";
 	}
-	print "Enter the starting directory: \n";
+	print "Enter the starting directory: ";
 	$start_dir = readline; chomp($start_dir);
 	print "What would you like to do with the stale backup files? (Delete|Move|Show) ";
 	$ans = readline; chomp($ans);
@@ -59,6 +63,7 @@ if (!$period) {
 my $time = time();
 
 find(\&wanted, $start_dir);
+
 
 #print Dumper(\@files);
 
@@ -82,42 +87,43 @@ foreach my $type ( sort keys %backups ) {
 
 #print Dumper(\%stales);
 
-print "Backup timeline:\n";
-foreach my $bak ( sort { $a <=> $b } keys %timeline ) {
-	if (&is_stale($timeline{$bak})) {
-		print colored(localtime($bak)." ".$timeline{$bak}->backup_type."\t".$timeline{$bak}->size_gbytes." GB \n", "red");
+if ($show) {
+	print "Backup timeline:\n";
+	foreach my $bak ( sort { $a <=> $b } keys %timeline ) {
+		if (&is_stale($timeline{$bak})) {
+			print colored(localtime($bak)." ".$timeline{$bak}->backup_type."\t".$timeline{$bak}->size_gbytes." GB \n", "red");
+		} else {
+			print colored(localtime($bak)." ".$timeline{$bak}->backup_type."\t".$timeline{$bak}->size_gbytes." GB \n", "green");
+		}
+	}
+
+	my $total_space = 0;
+	print "Stales count:\n";
+	foreach my $type ( sort keys %stales ) {
+		print "$type: ".scalar(@{$stales{$type}})."\n";
+		foreach my $stale ( @{$stales{$type}} ) {
+			$total_space += $stale->size;
+		}
+	}
+
+	print "You could recover ";
+	if ($total_space <= 1024) {
+		printf "%.3f bytes ", $total_space;
+	} elsif ($total_space <= 1048576) {
+		printf "%.3f KB ", ($total_space / 1024);
+	} elsif ($total_space <= 1073741824) {
+		printf "%.3f MB ", ($total_space / 1024 / 1024);
+	} elsif ($total_space <= 1099511627776) {
+		printf "%.3f GB ", ($total_space / 1024 / 1024 / 1024);
 	} else {
-		print colored(localtime($bak)." ".$timeline{$bak}->backup_type."\t".$timeline{$bak}->size_gbytes." GB \n", "green");
+		printf "%.3f TB ", ($total_space / 1048576 / 1048576);
 	}
+	print "by deleting stale backups.\n";
 }
-
-my $total_space = 0;
-print "Stales count:\n";
-foreach my $type ( sort keys %stales ) {
-	print "$type: ".scalar(@{$stales{$type}})."\n";
-	foreach my $stale ( @{$stales{$type}} ) {
-		$total_space += $stale->size;
-	}
-}
-
-print "You could recover ";
-if ($total_space <= 1024) {
-	printf "%.3f bytes ", $total_space;
-} elsif ($total_space <= 1048576) {
-	printf "%.3f KB ", ($total_space / 1024);
-} elsif ($total_space <= 1073741824) {
-	printf "%.3f MB ", ($total_space / 1024 / 1024);
-} elsif ($total_space <= 1099511627776) {
-	printf "%.3f GB ", ($total_space / 1024 / 1024 / 1024);
-} else {
-	printf "%.3f TB ", ($total_space / 1048576 / 1048576);
-}
-print "by deleting stale backups.\n";
-
 ###############################################################################
 # Subs
 ###############################################################################
-sub wanted { -f && push @files, $File::Find::name; }
+sub wanted { next unless ($File::Find::dir =~ /$start_dir$/); -f && push @files, $File::Find::name; }
 
 sub usage {
 	print "Print the usage statement\n";

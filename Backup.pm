@@ -11,8 +11,8 @@ use POSIX;
 
 require Exporter;
 
-our @EXPORT		= qw( );
-our @EXPORT_OK	= qw( );
+our @EXPORT		= qw( backup_host backup_date backup_type directory filename size size_kbytes size_mbytes size_gbytes size_tbytes );
+our @EXPORT_OK		= qw( );
 
 {
 	$Backup::VERSION	= '0.0.1';
@@ -32,9 +32,15 @@ sub new {
 	my @parts = split(/\_/, $base);
 	#print Dumper(\@parts);
 	$self->{'backup_type'} = $parts[0];
-	$self->{'raw_date'} = $parts[1];
 	$parts[2] =~ s/(.*)\.$/$1/;
-	$self->{'host'} = $parts[2];
+	if ($parts[1] =~ /^[0-9-]+$/) {
+		$self->{'raw_date'} = $parts[1];
+		$self->{'host'} = $parts[2];
+	} else {
+		print Dumper(\@parts);
+		$self->{'host'} = $parts[1];
+		$self->{'raw_date'} = $parts[2];
+	}
 	my @fstat = stat($self->{'fullfilename'});
 	$self->{'file_mode'} = $fstat[2];
 	$self->{'owner_uid'} = $fstat[5];
